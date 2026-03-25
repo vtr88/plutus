@@ -49,4 +49,5 @@ python -m plutus_bot
 
 - The bot uses long polling, so it must keep running somewhere to receive messages.
 - SQLite is stored at `data/plutus.sqlite3` by default.
+- Amount input accepts simple formats like `5`, `5.0`, `5,0`, `5.00`, or `5,00`.
 - For odd cent values, the split rounds one cent in favor of the payer. Example: `R$ 10,01` means the other person owes `R$ 5,00`.

@@ -261,7 +261,7 @@ async def add_command(message: Message, state: FSMContext, db: Database) -> None
         return
     await state.clear()
     await state.set_state(ExpenseFlow.amount)
-    await message.answer("What was the amount? Example: 42,90")
+    await message.answer("What was the amount? You can send 5, 5.0, 5,0, or 5.00")
 
 
 @router.message(ExpenseFlow.amount)
@@ -269,7 +269,7 @@ async def add_amount_step(message: Message, state: FSMContext) -> None:
     try:
         amount_cents = parse_amount_to_cents(message.text or "")
     except ValueError:
-        await message.answer("I could not read that amount. Try something like 42,90")
+        await message.answer("I could not read that amount. Try something like 5, 5.0, 5,0, or 5.00")
         return
 
     await state.update_data(amount_cents=amount_cents)
@@ -357,7 +357,7 @@ async def settle_direction_step(callback: CallbackQuery, state: FSMContext) -> N
     await state.update_data(direction=direction)
     await state.set_state(SettlementFlow.amount)
     await callback.answer()
-    await message.answer("What amount was settled? Example: 25,00")
+    await message.answer("What amount was settled? You can send 5, 5.0, 5,0, or 5.00")
 
 
 @router.message(SettlementFlow.amount)
@@ -365,7 +365,7 @@ async def settle_amount_step(message: Message, state: FSMContext) -> None:
     try:
         amount_cents = parse_amount_to_cents(message.text or "")
     except ValueError:
-        await message.answer("I could not read that amount. Try something like 25,00")
+        await message.answer("I could not read that amount. Try something like 5, 5.0, 5,0, or 5.00")
         return
 
     await state.update_data(amount_cents=amount_cents)
