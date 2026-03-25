@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 
-@dataclass(slots=True)
+@dataclass
 class Settings:
     bot_token: str
     database_path: Path

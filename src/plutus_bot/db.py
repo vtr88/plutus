@@ -3,41 +3,42 @@ from __future__ import annotations
 import secrets
 import sqlite3
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
+from typing import List, Optional
 
 
 def utc_now() -> str:
-    return datetime.now(UTC).replace(microsecond=0).isoformat()
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
-@dataclass(slots=True)
+@dataclass
 class User:
     id: int
     telegram_user_id: int
     chat_id: int
     first_name: str
-    username: str | None
+    username: Optional[str]
     created_at: str
 
 
-@dataclass(slots=True)
+@dataclass
 class Couple:
     id: int
     invite_code: str
     member1_user_id: int
-    member2_user_id: int | None
+    member2_user_id: Optional[int]
     created_at: str
 
 
-@dataclass(slots=True)
+@dataclass
 class CoupleBundle:
     couple: Couple
     you: User
-    partner: User | None
+    partner: Optional[User]
 
 
-@dataclass(slots=True)
+@dataclass
 class ActivityEntry:
     entry_type: str
     actor_name: str
@@ -46,7 +47,7 @@ class ActivityEntry:
     created_at: str
 
 
-@dataclass(slots=True)
+@dataclass
 class BalanceSnapshot:
     couple: Couple
     member1: User
@@ -115,7 +116,7 @@ class Database:
         telegram_user_id: int,
         chat_id: int,
         first_name: str,
-        username: str | None,
+        username: Optional[str],
     ) -> User:
         created_at = utc_now()
         with self._connect() as connection:
@@ -136,7 +137,7 @@ class Database:
             ).fetchone()
         return self._row_to_user(row)
 
-    def get_user_by_id(self, user_id: int) -> User | None:
+    def get_user_by_id(self, user_id: int) -> Optional[User]:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT * FROM users WHERE id = ?",
@@ -144,7 +145,7 @@ class Database:
             ).fetchone()
         return self._row_to_user(row) if row else None
 
-    def get_user_by_telegram_id(self, telegram_user_id: int) -> User | None:
+    def get_user_by_telegram_id(self, telegram_user_id: int) -> Optional[User]:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT * FROM users WHERE telegram_user_id = ?",
@@ -152,7 +153,7 @@ class Database:
             ).fetchone()
         return self._row_to_user(row) if row else None
 
-    def get_couple_bundle_for_user(self, user_id: int) -> CoupleBundle | None:
+    def get_couple_bundle_for_user(self, user_id: int) -> Optional[CoupleBundle]:
         with self._connect() as connection:
             row = connection.execute(
                 """
@@ -174,7 +175,7 @@ class Database:
         partner = self.get_user_by_id(partner_id) if partner_id else None
         return CoupleBundle(couple=couple, you=you, partner=partner)
 
-    def get_couple_by_code(self, invite_code: str) -> Couple | None:
+    def get_couple_by_code(self, invite_code: str) -> Optional[Couple]:
         with self._connect() as connection:
             row = connection.execute(
                 "SELECT * FROM couples WHERE invite_code = ?",
@@ -262,7 +263,7 @@ class Database:
                 (couple_id, from_user_id, to_user_id, amount_cents, note.strip(), utc_now()),
             )
 
-    def get_recent_activity(self, couple_id: int, limit: int = 10) -> list[ActivityEntry]:
+    def get_recent_activity(self, couple_id: int, limit: int = 10) -> List[ActivityEntry]:
         with self._connect() as connection:
             rows = connection.execute(
                 """
@@ -300,7 +301,7 @@ class Database:
             for row in rows
         ]
 
-    def get_balance_snapshot(self, user_id: int) -> BalanceSnapshot | None:
+    def get_balance_snapshot(self, user_id: int) -> Optional[BalanceSnapshot]:
         bundle = self.get_couple_bundle_for_user(user_id)
         if not bundle or not bundle.partner:
             return None

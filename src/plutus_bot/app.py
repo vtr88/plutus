@@ -10,6 +10,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.types import BotCommand, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Message, User as TelegramUser
+from typing import Optional, Tuple
 
 from plutus_bot.config import load_settings
 from plutus_bot.db import BalanceSnapshot, CoupleBundle, Database, User
@@ -65,7 +66,7 @@ def build_balance_text(snapshot: BalanceSnapshot, perspective_user_id: int) -> s
     return f"You owe <b>{escape(creditor.first_name)}</b> <b>{format_brl_from_cents(amount)}</b>."
 
 
-def build_status_text(bundle: CoupleBundle | None) -> str:
+def build_status_text(bundle: Optional[CoupleBundle]) -> str:
     if not bundle:
         return (
             "You are not paired yet.\n\n"
@@ -84,7 +85,7 @@ async def ensure_registered(message: Message, db: Database) -> User:
     return ensure_registered_user(message.from_user, message.chat.id, db)
 
 
-def ensure_registered_user(telegram_user: TelegramUser | None, chat_id: int, db: Database) -> User:
+def ensure_registered_user(telegram_user: Optional[TelegramUser], chat_id: int, db: Database) -> User:
     if telegram_user is None:
         raise RuntimeError("Message has no sender.")
     return db.upsert_user(
@@ -95,7 +96,7 @@ def ensure_registered_user(telegram_user: TelegramUser | None, chat_id: int, db:
     )
 
 
-async def require_full_pair(message: Message, db: Database) -> tuple[User, CoupleBundle] | None:
+async def require_full_pair(message: Message, db: Database) -> Optional[Tuple[User, CoupleBundle]]:
     user = ensure_registered_user(message.from_user, message.chat.id, db)
     bundle = db.get_couple_bundle_for_user(user.id)
     if not bundle:
@@ -113,7 +114,7 @@ async def require_full_pair(message: Message, db: Database) -> tuple[User, Coupl
 async def require_full_pair_from_callback(
     callback: CallbackQuery,
     db: Database,
-) -> tuple[User, CoupleBundle] | None:
+) -> Optional[Tuple[User, CoupleBundle]]:
     message = callback.message
     if message is None:
         return None
@@ -132,7 +133,7 @@ async def require_full_pair_from_callback(
     return user, bundle
 
 
-async def notify_partner(bot: Bot, partner: User | None, text: str) -> None:
+async def notify_partner(bot: Bot, partner: Optional[User], text: str) -> None:
     if not partner:
         return
     try:
@@ -304,7 +305,7 @@ async def add_payer_step(callback: CallbackQuery, state: FSMContext, db: Databas
     assert bundle.partner is not None
 
     data = await state.get_data()
-    payer_choice = callback.data.removeprefix(ADD_PAYER_PREFIX)
+    payer_choice = callback.data[len(ADD_PAYER_PREFIX):]
     paid_by_user_id = user.id if payer_choice == "me" else bundle.partner.id
 
     db.add_expense(
@@ -352,7 +353,7 @@ async def settle_direction_step(callback: CallbackQuery, state: FSMContext) -> N
         await callback.answer()
         return
 
-    direction = callback.data.removeprefix(SETTLE_DIRECTION_PREFIX)
+    direction = callback.data[len(SETTLE_DIRECTION_PREFIX):]
     await state.update_data(direction=direction)
     await state.set_state(SettlementFlow.amount)
     await callback.answer()
@@ -392,7 +393,7 @@ async def settle_note_step(message: Message, state: FSMContext, db: Database, bo
 
 async def complete_settlement(
     message: Message,
-    actor: TelegramUser | None,
+    actor: Optional[TelegramUser],
     state: FSMContext,
     db: Database,
     bot: Bot,

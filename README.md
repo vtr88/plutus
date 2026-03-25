@@ -14,7 +14,7 @@ Private Telegram bot for two people to split shared expenses and keep a running 
 
 ## Stack
 
-- Python 3.11+
+- Python 3.9+
 - `aiogram` for the Telegram bot
 - SQLite for storage
 - Long polling, so you do not need a public webhook for v1
