@@ -1,0 +1,16 @@
+[Unit]
+Description=Plutus Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=soth
+WorkingDirectory=/home/soth/Projects/plutus
+EnvironmentFile=/home/soth/Projects/plutus/.env
+ExecStart=/home/soth/Projects/plutus/.venv/bin/python -m plutus_bot
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

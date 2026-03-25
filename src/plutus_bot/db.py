@@ -188,7 +188,7 @@ class Database:
         if existing:
             if existing.couple.member2_user_id is None:
                 return existing.couple
-            raise ValueError("You are already paired with someone.")
+            raise ValueError("Voce ja esta pareado com alguem.")
 
         invite_code = self._generate_invite_code()
         created_at = utc_now()
@@ -209,13 +209,13 @@ class Database:
     def join_couple(self, invite_code: str, joining_user_id: int) -> Couple:
         couple = self.get_couple_by_code(invite_code)
         if not couple:
-            raise ValueError("This invite code does not exist.")
+            raise ValueError("Esse codigo de convite nao existe.")
         if couple.member1_user_id == joining_user_id:
-            raise ValueError("You cannot join your own invite code.")
+            raise ValueError("Voce nao pode entrar no seu proprio codigo.")
         if couple.member2_user_id is not None:
-            raise ValueError("This invite code has already been used.")
+            raise ValueError("Esse codigo de convite ja foi usado.")
         if self.get_couple_bundle_for_user(joining_user_id):
-            raise ValueError("You are already paired with someone.")
+            raise ValueError("Voce ja esta pareado com alguem.")
 
         with self._connect() as connection:
             connection.execute(

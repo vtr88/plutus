@@ -27,8 +27,8 @@ def expense_payer_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="I paid", callback_data=f"{ADD_PAYER_PREFIX}me"),
-                InlineKeyboardButton(text="My partner paid", callback_data=f"{ADD_PAYER_PREFIX}partner"),
+                InlineKeyboardButton(text="Eu paguei", callback_data=f"{ADD_PAYER_PREFIX}me"),
+                InlineKeyboardButton(text="Meu par pagou", callback_data=f"{ADD_PAYER_PREFIX}partner"),
             ]
         ]
     )
@@ -38,8 +38,8 @@ def settlement_direction_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [
-                InlineKeyboardButton(text="I paid my partner", callback_data=f"{SETTLE_DIRECTION_PREFIX}to_partner"),
-                InlineKeyboardButton(text="My partner paid me", callback_data=f"{SETTLE_DIRECTION_PREFIX}to_me"),
+                InlineKeyboardButton(text="Eu paguei meu par", callback_data=f"{SETTLE_DIRECTION_PREFIX}to_partner"),
+                InlineKeyboardButton(text="Meu par me pagou", callback_data=f"{SETTLE_DIRECTION_PREFIX}to_me"),
             ]
         ]
     )
@@ -48,37 +48,37 @@ def settlement_direction_keyboard() -> InlineKeyboardMarkup:
 def skip_note_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text="Skip note", callback_data="settle_skip_note")]
+            [InlineKeyboardButton(text="Pular observacao", callback_data="settle_skip_note")]
         ]
     )
 
 
 def build_balance_text(snapshot: BalanceSnapshot, perspective_user_id: int) -> str:
     if snapshot.net_cents_in_favor_of_member1 == 0:
-        return "You are square right now. Nobody owes anything."
+        return "Voces estao quites agora. Ninguem deve nada."
 
     creditor = snapshot.member1 if snapshot.net_cents_in_favor_of_member1 > 0 else snapshot.member2
     debtor = snapshot.member2 if snapshot.net_cents_in_favor_of_member1 > 0 else snapshot.member1
     amount = abs(snapshot.net_cents_in_favor_of_member1)
 
     if perspective_user_id == creditor.id:
-        return f"<b>{escape(debtor.first_name)}</b> owes you <b>{format_brl_from_cents(amount)}</b>."
-    return f"You owe <b>{escape(creditor.first_name)}</b> <b>{format_brl_from_cents(amount)}</b>."
+        return f"<b>{escape(debtor.first_name)}</b> te deve <b>{format_brl_from_cents(amount)}</b>."
+    return f"Voce deve <b>{escape(creditor.first_name)}</b> <b>{format_brl_from_cents(amount)}</b>."
 
 
 def build_status_text(bundle: Optional[CoupleBundle]) -> str:
     if not bundle:
         return (
-            "You are not paired yet.\n\n"
-            "Use /pair to generate an invite code, then ask your partner to send /join CODE."
+            "Voce ainda nao esta pareado.\n\n"
+            "Use /parear para gerar um codigo de convite e depois peca para seu par enviar /entrar CODIGO."
         )
     if not bundle.partner:
         return (
-            "Your invite is ready, but your partner has not joined yet.\n\n"
-            f"Invite code: <code>{bundle.couple.invite_code}</code>\n"
-            "Ask your partner to send /join with that code."
+            "Seu convite esta pronto, mas seu par ainda nao entrou.\n\n"
+            f"Codigo do convite: <code>{bundle.couple.invite_code}</code>\n"
+            "Peca para seu par enviar /entrar com esse codigo."
         )
-    return f"You are paired with <b>{escape(bundle.partner.first_name)}</b>."
+    return f"Voce esta pareado com <b>{escape(bundle.partner.first_name)}</b>."
 
 
 async def ensure_registered(message: Message, db: Database) -> User:
@@ -100,12 +100,12 @@ async def require_full_pair(message: Message, db: Database) -> Optional[Tuple[Us
     user = ensure_registered_user(message.from_user, message.chat.id, db)
     bundle = db.get_couple_bundle_for_user(user.id)
     if not bundle:
-        await message.answer("You need to pair first. Use /pair to create an invite code.")
+        await message.answer("Voce precisa se parear primeiro. Use /parear para criar um codigo.")
         return None
     if not bundle.partner:
         await message.answer(
-            "Your pair is not complete yet.\n\n"
-            f"Invite code: <code>{bundle.couple.invite_code}</code>"
+            "Seu pareamento ainda nao esta completo.\n\n"
+            f"Codigo do convite: <code>{bundle.couple.invite_code}</code>"
         )
         return None
     return user, bundle
@@ -122,12 +122,12 @@ async def require_full_pair_from_callback(
     user = ensure_registered_user(callback.from_user, message.chat.id, db)
     bundle = db.get_couple_bundle_for_user(user.id)
     if not bundle:
-        await message.answer("You need to pair first. Use /pair to create an invite code.")
+        await message.answer("Voce precisa se parear primeiro. Use /parear para criar um codigo.")
         return None
     if not bundle.partner:
         await message.answer(
-            "Your pair is not complete yet.\n\n"
-            f"Invite code: <code>{bundle.couple.invite_code}</code>"
+            "Seu pareamento ainda nao esta completo.\n\n"
+            f"Codigo do convite: <code>{bundle.couple.invite_code}</code>"
         )
         return None
     return user, bundle
@@ -142,33 +142,33 @@ async def notify_partner(bot: Bot, partner: Optional[User], text: str) -> None:
         logging.exception("Failed to notify partner chat_id=%s", partner.chat_id)
 
 
-@router.message(Command("start"))
+@router.message(Command(commands=["start", "inicio"]))
 async def start_command(message: Message, db: Database) -> None:
     user = await ensure_registered(message, db)
     bundle = db.get_couple_bundle_for_user(user.id)
     await message.answer(
-        "Welcome to Plutus.\n\n"
-        "This bot helps two people split shared expenses and keep a running balance.\n\n"
+        "Bem-vindo ao Plutus.\n\n"
+        "Este bot ajuda duas pessoas a dividir gastos compartilhados e manter um saldo atualizado.\n\n"
         f"{build_status_text(bundle)}\n\n"
-        "Commands: /pair, /join, /add, /balance, /history, /settle, /cancel"
+        "Comandos: /parear, /entrar, /adicionar, /saldo, /historico, /acerto, /cancelar"
     )
 
 
-@router.message(Command("help"))
+@router.message(Command(commands=["help", "ajuda"]))
 async def help_command(message: Message) -> None:
     await message.answer(
-        "Commands:\n"
-        "/pair - create an invite code\n"
-        "/join CODE - join your partner\n"
-        "/add - add a shared expense\n"
-        "/balance - see who owes whom\n"
-        "/history - show recent entries\n"
-        "/settle - record a repayment\n"
-        "/cancel - stop the current flow"
+        "Comandos:\n"
+        "/parear - cria um codigo de convite\n"
+        "/entrar CODIGO - entra com o codigo do seu par\n"
+        "/adicionar - adiciona um gasto compartilhado\n"
+        "/saldo - mostra quem deve para quem\n"
+        "/historico - mostra os ultimos lancamentos\n"
+        "/acerto - registra um pagamento entre voces\n"
+        "/cancelar - interrompe o fluxo atual"
     )
 
 
-@router.message(Command("pair"))
+@router.message(Command(commands=["pair", "parear"]))
 async def pair_command(message: Message, db: Database) -> None:
     user = await ensure_registered(message, db)
     try:
@@ -179,18 +179,18 @@ async def pair_command(message: Message, db: Database) -> None:
         return
 
     await message.answer(
-        "Invite created.\n\n"
-        f"Share this code with your partner: <code>{couple.invite_code}</code>\n"
-        "They should open the bot and send /join with this code."
+        "Convite criado.\n\n"
+        f"Compartilhe este codigo com seu par: <code>{couple.invite_code}</code>\n"
+        "Seu par deve abrir o bot e enviar /entrar com esse codigo."
     )
 
 
-@router.message(Command("join"))
+@router.message(Command(commands=["join", "entrar"]))
 async def join_command(message: Message, command: CommandObject, db: Database, bot: Bot) -> None:
     user = await ensure_registered(message, db)
     code = (command.args or "").strip().upper()
     if not code:
-        await message.answer("Send the command like this: /join ABC123")
+        await message.answer("Use o comando assim: /entrar ABC123")
         return
 
     try:
@@ -203,20 +203,20 @@ async def join_command(message: Message, command: CommandObject, db: Database, b
     assert bundle is not None and bundle.partner is not None
 
     await message.answer(
-        f"You are now paired with <b>{escape(bundle.partner.first_name)}</b>.\n"
-        "You can start using /add and /balance."
+        f"Voce agora esta pareado com <b>{escape(bundle.partner.first_name)}</b>.\n"
+        "Voce ja pode usar /adicionar e /saldo."
     )
 
     creator = db.get_user_by_id(couple.member1_user_id)
     await notify_partner(
         bot,
         creator,
-        f"<b>{escape(user.first_name)}</b> joined your Plutus pair.\n"
-        "You can now start tracking expenses with /add.",
+        f"<b>{escape(user.first_name)}</b> entrou no seu pareamento do Plutus.\n"
+        "Agora voces ja podem registrar gastos com /adicionar.",
     )
 
 
-@router.message(Command("balance"))
+@router.message(Command(commands=["balance", "saldo"]))
 async def balance_command(message: Message, db: Database) -> None:
     user = await ensure_registered(message, db)
     snapshot = db.get_balance_snapshot(user.id)
@@ -227,7 +227,7 @@ async def balance_command(message: Message, db: Database) -> None:
     await message.answer(build_balance_text(snapshot, user.id))
 
 
-@router.message(Command("history"))
+@router.message(Command(commands=["history", "historico"]))
 async def history_command(message: Message, db: Database) -> None:
     pair = await require_full_pair(message, db)
     if not pair:
@@ -235,33 +235,33 @@ async def history_command(message: Message, db: Database) -> None:
     _, bundle = pair
     entries = db.get_recent_activity(bundle.couple.id, limit=10)
     if not entries:
-        await message.answer("No expenses or settlements yet.")
+        await message.answer("Ainda nao ha gastos nem acertos.")
         return
 
-    lines = ["Recent activity:"]
+    lines = ["Historico recente:"]
     for entry in entries:
         if entry.entry_type == "expense":
             lines.append(
-                f"- Expense by <b>{escape(entry.actor_name)}</b>: "
-                f"{format_brl_from_cents(entry.amount_cents)} for {escape(entry.description)}"
+                f"- Gasto pago por <b>{escape(entry.actor_name)}</b>: "
+                f"{format_brl_from_cents(entry.amount_cents)} em {escape(entry.description)}"
             )
         else:
             lines.append(
-                f"- Settlement <b>{escape(entry.actor_name)}</b>: "
+                f"- Acerto <b>{escape(entry.actor_name)}</b>: "
                 f"{format_brl_from_cents(entry.amount_cents)}"
                 + (f" ({escape(entry.description)})" if entry.description else "")
             )
     await message.answer("\n".join(lines))
 
 
-@router.message(Command("add"))
+@router.message(Command(commands=["add", "adicionar"]))
 async def add_command(message: Message, state: FSMContext, db: Database) -> None:
     pair = await require_full_pair(message, db)
     if not pair:
         return
     await state.clear()
     await state.set_state(ExpenseFlow.amount)
-    await message.answer("What was the amount? You can send 5, 5.0, 5,0, or 5.00")
+    await message.answer("Qual foi o valor? Pode enviar 5, 5.0, 5,0 ou 5.00")
 
 
 @router.message(ExpenseFlow.amount)
@@ -269,24 +269,24 @@ async def add_amount_step(message: Message, state: FSMContext) -> None:
     try:
         amount_cents = parse_amount_to_cents(message.text or "")
     except ValueError:
-        await message.answer("I could not read that amount. Try something like 5, 5.0, 5,0, or 5.00")
+        await message.answer("Nao consegui entender esse valor. Tente algo como 5, 5.0, 5,0 ou 5.00")
         return
 
     await state.update_data(amount_cents=amount_cents)
     await state.set_state(ExpenseFlow.description)
-    await message.answer("What was it for?")
+    await message.answer("Foi gasto com o que?")
 
 
 @router.message(ExpenseFlow.description)
 async def add_description_step(message: Message, state: FSMContext) -> None:
     description = (message.text or "").strip()
     if not description:
-        await message.answer("Please send a short description.")
+        await message.answer("Envie uma descricao curta.")
         return
 
     await state.update_data(description=description)
     await state.set_state(ExpenseFlow.payer)
-    await message.answer("Who paid for it?", reply_markup=expense_payer_keyboard())
+    await message.answer("Quem pagou isso?", reply_markup=expense_payer_keyboard())
 
 
 @router.callback_query(ExpenseFlow.payer, F.data.startswith(ADD_PAYER_PREFIX))
@@ -321,29 +321,29 @@ async def add_payer_step(callback: CallbackQuery, state: FSMContext, db: Databas
     amount_text = format_brl_from_cents(int(data["amount_cents"]))
     description = escape(str(data["description"]))
 
-    await callback.answer("Expense saved.")
+    await callback.answer("Gasto salvo.")
     await message.answer(
-        f"Saved expense: <b>{amount_text}</b> for <b>{description}</b>, paid by <b>{escape(payer_name)}</b>.\n"
+        f"Gasto salvo: <b>{amount_text}</b> em <b>{description}</b>, pago por <b>{escape(payer_name)}</b>.\n"
         f"{build_balance_text(snapshot, user.id)}"
     )
 
     await notify_partner(
         bot,
         bundle.partner if bundle.partner.id != user.id else user,
-        f"New shared expense: <b>{amount_text}</b> for <b>{description}</b>, paid by <b>{escape(payer_name)}</b>.\n"
+        f"Novo gasto compartilhado: <b>{amount_text}</b> em <b>{description}</b>, pago por <b>{escape(payer_name)}</b>.\n"
         f"{build_balance_text(snapshot, bundle.partner.id)}",
     )
     await state.clear()
 
 
-@router.message(Command("settle"))
+@router.message(Command(commands=["settle", "acerto"]))
 async def settle_command(message: Message, state: FSMContext, db: Database) -> None:
     pair = await require_full_pair(message, db)
     if not pair:
         return
     await state.clear()
     await state.set_state(SettlementFlow.direction)
-    await message.answer("Which repayment happened?", reply_markup=settlement_direction_keyboard())
+    await message.answer("Qual acerto aconteceu?", reply_markup=settlement_direction_keyboard())
 
 
 @router.callback_query(SettlementFlow.direction, F.data.startswith(SETTLE_DIRECTION_PREFIX))
@@ -357,7 +357,7 @@ async def settle_direction_step(callback: CallbackQuery, state: FSMContext) -> N
     await state.update_data(direction=direction)
     await state.set_state(SettlementFlow.amount)
     await callback.answer()
-    await message.answer("What amount was settled? You can send 5, 5.0, 5,0, or 5.00")
+    await message.answer("Qual valor foi acertado? Pode enviar 5, 5.0, 5,0 ou 5.00")
 
 
 @router.message(SettlementFlow.amount)
@@ -365,13 +365,13 @@ async def settle_amount_step(message: Message, state: FSMContext) -> None:
     try:
         amount_cents = parse_amount_to_cents(message.text or "")
     except ValueError:
-        await message.answer("I could not read that amount. Try something like 5, 5.0, 5,0, or 5.00")
+        await message.answer("Nao consegui entender esse valor. Tente algo como 5, 5.0, 5,0 ou 5.00")
         return
 
     await state.update_data(amount_cents=amount_cents)
     await state.set_state(SettlementFlow.note)
     await message.answer(
-        "Optional note? You can type one now, or skip it.",
+        "Quer adicionar uma observacao? Pode escrever agora ou pular.",
         reply_markup=skip_note_keyboard(),
     )
 
@@ -403,7 +403,7 @@ async def complete_settlement(
     bundle = db.get_couple_bundle_for_user(user.id)
     pair = (user, bundle) if bundle and bundle.partner else None
     if not pair:
-        await message.answer("You need a complete pair before recording settlements.")
+        await message.answer("Voce precisa ter um pareamento completo antes de registrar um acerto.")
         await state.clear()
         return
     user, bundle = pair
@@ -416,13 +416,13 @@ async def complete_settlement(
     if direction == "to_partner":
         from_user_id = user.id
         to_user_id = bundle.partner.id
-        summary = f"You paid <b>{escape(bundle.partner.first_name)}</b>"
-        partner_summary = f"<b>{escape(user.first_name)}</b> paid you"
+        summary = f"Voce pagou <b>{escape(bundle.partner.first_name)}</b>"
+        partner_summary = f"<b>{escape(user.first_name)}</b> te pagou"
     else:
         from_user_id = bundle.partner.id
         to_user_id = user.id
-        summary = f"<b>{escape(bundle.partner.first_name)}</b> paid you"
-        partner_summary = f"You paid <b>{escape(user.first_name)}</b>"
+        summary = f"<b>{escape(bundle.partner.first_name)}</b> te pagou"
+        partner_summary = f"Voce pagou <b>{escape(user.first_name)}</b>"
 
     db.add_settlement(
         couple_id=bundle.couple.id,
@@ -435,44 +435,45 @@ async def complete_settlement(
     snapshot = db.get_balance_snapshot(user.id)
     assert snapshot is not None
     amount_text = format_brl_from_cents(amount_cents)
-    note_text = f"\nNote: {escape(note)}" if note else ""
+    note_text = f"\nObservacao: {escape(note)}" if note else ""
 
-    await message.answer(f"Settlement saved: {summary} <b>{amount_text}</b>.{note_text}\n{build_balance_text(snapshot, user.id)}")
+    await message.answer(f"Acerto salvo: {summary} <b>{amount_text}</b>.{note_text}\n{build_balance_text(snapshot, user.id)}")
     await notify_partner(
         bot,
         bundle.partner if bundle.partner.id != user.id else user,
-        f"Settlement saved: {partner_summary} <b>{amount_text}</b>.{note_text}\n"
+        f"Acerto salvo: {partner_summary} <b>{amount_text}</b>.{note_text}\n"
         f"{build_balance_text(snapshot, bundle.partner.id)}",
     )
     await state.clear()
 
 
-@router.message(Command("cancel"))
+@router.message(Command(commands=["cancel", "cancelar"]))
 async def cancel_command(message: Message, state: FSMContext) -> None:
     current_state = await state.get_state()
     if current_state is None:
-        await message.answer("There is no active flow to cancel.")
+        await message.answer("Nao existe nenhum fluxo ativo para cancelar.")
         return
     await state.clear()
-    await message.answer("Canceled.")
+    await message.answer("Cancelado.")
 
 
 @router.message()
 async def fallback_message(message: Message) -> None:
-    await message.answer("I didn't understand that. Use /help to see the available commands.")
+    await message.answer("Nao entendi isso. Use /ajuda para ver os comandos disponiveis.")
 
 
 async def configure_bot_commands(bot: Bot) -> None:
     await bot.set_my_commands(
         [
-            BotCommand(command="start", description="Register and show status"),
-            BotCommand(command="pair", description="Create an invite code"),
-            BotCommand(command="join", description="Join with an invite code"),
-            BotCommand(command="add", description="Add a shared expense"),
-            BotCommand(command="balance", description="Show who owes whom"),
-            BotCommand(command="history", description="Show recent activity"),
-            BotCommand(command="settle", description="Record a repayment"),
-            BotCommand(command="cancel", description="Cancel the current flow"),
+            BotCommand(command="inicio", description="Mostra o status e registra voce"),
+            BotCommand(command="ajuda", description="Lista os comandos do bot"),
+            BotCommand(command="parear", description="Cria um codigo de convite"),
+            BotCommand(command="entrar", description="Entra com o codigo do seu par"),
+            BotCommand(command="adicionar", description="Adiciona um gasto compartilhado"),
+            BotCommand(command="saldo", description="Mostra quem deve para quem"),
+            BotCommand(command="historico", description="Mostra os ultimos lancamentos"),
+            BotCommand(command="acerto", description="Registra um pagamento entre voces"),
+            BotCommand(command="cancelar", description="Cancela o fluxo atual"),
         ]
     )
 

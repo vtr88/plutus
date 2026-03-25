@@ -1,34 +1,34 @@
 # Plutus
 
-Private Telegram bot for two people to split shared expenses and keep a running balance.
+Bot privado no Telegram para duas pessoas dividirem gastos compartilhados e acompanharem quem deve para quem.
 
-## What this version does
+## O que esta versao faz
 
-- Registers each person with `/start`
-- Creates a pair with `/pair` and `/join CODE`
-- Adds shared expenses with `/add`
-- Shows the current net balance with `/balance`
-- Lists recent activity with `/history`
-- Records repayments with `/settle`
-- Notifies the other person whenever an expense or settlement is saved
+- Registra cada pessoa com `/inicio` ou `/start`
+- Cria um pareamento com `/parear` e `/entrar CODIGO`
+- Adiciona gastos compartilhados com `/adicionar`
+- Mostra o saldo atual com `/saldo`
+- Lista os ultimos lancamentos com `/historico`
+- Registra pagamentos entre voces com `/acerto`
+- Notifica a outra pessoa sempre que um gasto ou acerto for salvo
 
 ## Stack
 
 - Python 3.9+
-- `aiogram` for the Telegram bot
-- SQLite for storage
-- Long polling, so you do not need a public webhook for v1
+- `aiogram` para o bot do Telegram
+- SQLite para armazenamento
+- Long polling, entao voce nao precisa de webhook publico na v1
 
 ## Setup
 
-1. Create your bot with `@BotFather` and copy the token.
-2. Copy `.env.example` to `.env`.
-3. Fill in `BOT_TOKEN`.
-4. Create and activate a virtual environment.
-5. Install dependencies.
-6. Run the bot.
+1. Crie o bot no `@BotFather` e copie o token.
+2. Copie `.env.example` para `.env`.
+3. Preencha `BOT_TOKEN`.
+4. Crie e ative um ambiente virtual.
+5. Instale as dependencias.
+6. Rode o bot.
 
-Example:
+Exemplo:
 
 ```bash
 python3 -m venv .venv
@@ -40,14 +40,33 @@ python -m plutus_bot
 
 ## Telegram flow
 
-1. You and your wife both open the bot and send `/start`.
-2. One person sends `/pair` and shares the code.
-3. The other person sends `/join CODE`.
-4. After that, either of you can use `/add`, `/balance`, `/history`, and `/settle`.
+1. Voce e sua esposa abrem o bot e enviam `/start` ou `/inicio`.
+2. Uma pessoa envia `/parear` e compartilha o codigo.
+3. A outra pessoa envia `/entrar CODIGO`.
+4. Depois disso, qualquer um dos dois pode usar `/adicionar`, `/saldo`, `/historico` e `/acerto`.
 
-## Notes
+## Observacoes
 
-- The bot uses long polling, so it must keep running somewhere to receive messages.
-- SQLite is stored at `data/plutus.sqlite3` by default.
-- Amount input accepts simple formats like `5`, `5.0`, `5,0`, `5.00`, or `5,00`.
-- For odd cent values, the split rounds one cent in favor of the payer. Example: `R$ 10,01` means the other person owes `R$ 5,00`.
+- O bot usa long polling, entao precisa ficar rodando em algum lugar para receber mensagens.
+- O SQLite fica em `data/plutus.sqlite3` por padrao.
+- O valor aceita formatos simples como `5`, `5.0`, `5,0`, `5.00` ou `5,00`.
+- Para valores com centavo impar, a divisao arredonda um centavo a favor de quem pagou. Exemplo: `R$ 10,01` faz a outra pessoa dever `R$ 5,00`.
+
+## Rodando Como Servico
+
+Existe uma unidade `systemd` pronta em `deploy/plutus.service`.
+
+No servidor:
+
+```bash
+sudo cp deploy/plutus.service /etc/systemd/system/plutus.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now plutus
+sudo systemctl status plutus
+```
+
+Logs:
+
+```bash
+journalctl -u plutus -f
+```
