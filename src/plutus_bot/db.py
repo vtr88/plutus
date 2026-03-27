@@ -340,9 +340,9 @@ class Database:
 
         for row in settlement_rows:
             if row["from_user_id"] == member1.id and row["to_user_id"] == member2.id:
-                net -= row["amount_cents"]
-            elif row["from_user_id"] == member2.id and row["to_user_id"] == member1.id:
                 net += row["amount_cents"]
+            elif row["from_user_id"] == member2.id and row["to_user_id"] == member1.id:
+                net -= row["amount_cents"]
 
         return BalanceSnapshot(
             couple=bundle.couple,
