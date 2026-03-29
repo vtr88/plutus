@@ -8,7 +8,8 @@ Bot privado no Telegram para duas pessoas dividirem gastos compartilhados e acom
 - Cria um pareamento com `/parear` e `/entrar CODIGO`
 - Adiciona gastos compartilhados com `/adicionar`
 - Mostra o saldo atual com `/saldo`
-- Lista os ultimos lancamentos com `/historico`
+- Lista ate 10 lancamentos depois do ultimo acerto com `/historico`
+- Mostra o historico completo com `/historico all`
 - Registra pagamentos entre voces com `/acerto`
 - Notifica a outra pessoa sempre que um gasto ou acerto for salvo
 
@@ -43,7 +44,7 @@ python -m plutus_bot
 1. Voce e sua esposa abrem o bot e enviam `/start` ou `/inicio`.
 2. Uma pessoa envia `/parear` e compartilha o codigo.
 3. A outra pessoa envia `/entrar CODIGO`.
-4. Depois disso, qualquer um dos dois pode usar `/adicionar`, `/saldo`, `/historico` e `/acerto`.
+4. Depois disso, qualquer um dos dois pode usar `/adicionar`, `/saldo`, `/historico`, `/historico all` e `/acerto`.
 
 ## Observacoes
 

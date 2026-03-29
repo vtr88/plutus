@@ -263,35 +263,62 @@ class Database:
                 (couple_id, from_user_id, to_user_id, amount_cents, note.strip(), utc_now()),
             )
 
-    def get_recent_activity(self, couple_id: int, limit: int = 10) -> List[ActivityEntry]:
-        with self._connect() as connection:
-            rows = connection.execute(
-                """
-                SELECT entry_type, actor_name, amount_cents, description, created_at
-                FROM (
-                    SELECT 'expense' AS entry_type, users.first_name AS actor_name, expenses.amount_cents,
-                           expenses.description AS description, expenses.created_at AS created_at
-                    FROM expenses
-                    JOIN users ON users.id = expenses.paid_by_user_id
-                    WHERE expenses.couple_id = ?
+    def get_activity(
+        self,
+        couple_id: int,
+        *,
+        limit: Optional[int] = None,
+        since_last_settlement: bool = False,
+    ) -> List[ActivityEntry]:
+        query = """
+            SELECT entry_type, actor_name, amount_cents, description, created_at
+            FROM (
+                SELECT 'expense' AS entry_type, users.first_name AS actor_name, expenses.amount_cents,
+                       expenses.description AS description, expenses.created_at AS created_at
+                FROM expenses
+                JOIN users ON users.id = expenses.paid_by_user_id
+                WHERE expenses.couple_id = ?
 
-                    UNION ALL
+                UNION ALL
 
-                    SELECT 'settlement' AS entry_type,
-                           from_user.first_name || ' -> ' || to_user.first_name AS actor_name,
-                           settlements.amount_cents AS amount_cents,
-                           settlements.note AS description,
-                           settlements.created_at AS created_at
-                    FROM settlements
-                    JOIN users AS from_user ON from_user.id = settlements.from_user_id
-                    JOIN users AS to_user ON to_user.id = settlements.to_user_id
-                    WHERE settlements.couple_id = ?
+                SELECT 'settlement' AS entry_type,
+                       from_user.first_name || ' -> ' || to_user.first_name AS actor_name,
+                       settlements.amount_cents AS amount_cents,
+                       settlements.note AS description,
+                       settlements.created_at AS created_at
+                FROM settlements
+                JOIN users AS from_user ON from_user.id = settlements.from_user_id
+                JOIN users AS to_user ON to_user.id = settlements.to_user_id
+                WHERE settlements.couple_id = ?
+            )
+        """
+        params = [couple_id, couple_id]
+
+        if since_last_settlement:
+            query += """
+                WHERE (
+                    COALESCE((SELECT MAX(created_at) FROM settlements WHERE couple_id = ?), '') = ''
+                    OR created_at > (SELECT MAX(created_at) FROM settlements WHERE couple_id = ?)
+                    OR (
+                        created_at = (SELECT MAX(created_at) FROM settlements WHERE couple_id = ?)
+                        AND entry_type != 'settlement'
+                    )
                 )
-                ORDER BY created_at DESC
+            """
+            params.extend([couple_id, couple_id, couple_id])
+
+        query += """
+            ORDER BY created_at DESC
+        """
+
+        if limit is not None:
+            query += """
                 LIMIT ?
-                """,
-                (couple_id, couple_id, limit),
-            ).fetchall()
+            """
+            params.append(limit)
+
+        with self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
         return [
             ActivityEntry(
                 entry_type=row["entry_type"],

@@ -81,6 +81,22 @@ def build_status_text(bundle: Optional[CoupleBundle]) -> str:
     return f"Voce esta pareado com <b>{escape(bundle.partner.first_name)}</b>."
 
 
+async def send_lines_in_chunks(message: Message, lines: list[str], title: str) -> None:
+    max_chars = 3500
+    current_lines = [title]
+
+    for line in lines:
+        candidate = "\n".join(current_lines + [line])
+        if len(candidate) > max_chars:
+            await message.answer("\n".join(current_lines))
+            current_lines = ["Continuacao do historico:", line]
+        else:
+            current_lines.append(line)
+
+    if current_lines:
+        await message.answer("\n".join(current_lines))
+
+
 async def ensure_registered(message: Message, db: Database) -> User:
     return ensure_registered_user(message.from_user, message.chat.id, db)
 
@@ -162,7 +178,8 @@ async def help_command(message: Message) -> None:
         "/entrar CODIGO - entra com o codigo do seu par\n"
         "/adicionar - adiciona um gasto compartilhado\n"
         "/saldo - mostra quem deve para quem\n"
-        "/historico - mostra os ultimos lancamentos\n"
+        "/historico - mostra ate 10 lancamentos depois do ultimo acerto\n"
+        "/historico all - mostra o historico completo\n"
         "/acerto - registra um pagamento entre voces\n"
         "/cancelar - interrompe o fluxo atual"
     )
@@ -228,17 +245,34 @@ async def balance_command(message: Message, db: Database) -> None:
 
 
 @router.message(Command(commands=["history", "historico"]))
-async def history_command(message: Message, db: Database) -> None:
+async def history_command(message: Message, command: CommandObject, db: Database) -> None:
     pair = await require_full_pair(message, db)
     if not pair:
         return
-    _, bundle = pair
-    entries = db.get_recent_activity(bundle.couple.id, limit=10)
-    if not entries:
-        await message.answer("Ainda nao ha gastos nem acertos.")
+
+    mode = (command.args or "").strip().lower()
+    if mode not in ("", "all", "todos"):
+        await message.answer("Use /historico para os ultimos lancamentos ou /historico all para ver tudo.")
         return
 
-    lines = ["Historico recente:"]
+    show_all = mode in ("all", "todos")
+    _, bundle = pair
+
+    entries = db.get_activity(
+        bundle.couple.id,
+        limit=None if show_all else 10,
+        since_last_settlement=not show_all,
+    )
+
+    if not entries:
+        if show_all:
+            await message.answer("Ainda nao ha gastos nem acertos.")
+        else:
+            await message.answer("Ainda nao ha lancamentos depois do ultimo acerto. Use /historico all para ver tudo.")
+        return
+
+    title = "Historico completo:" if show_all else "Historico desde o ultimo acerto:"
+    lines = []
     for entry in entries:
         if entry.entry_type == "expense":
             lines.append(
@@ -251,7 +285,7 @@ async def history_command(message: Message, db: Database) -> None:
                 f"{format_brl_from_cents(entry.amount_cents)}"
                 + (f" ({escape(entry.description)})" if entry.description else "")
             )
-    await message.answer("\n".join(lines))
+    await send_lines_in_chunks(message, lines, title)
 
 
 @router.message(Command(commands=["add", "adicionar"]))
